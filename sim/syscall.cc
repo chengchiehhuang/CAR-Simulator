@@ -30,16 +30,23 @@ static int32_t inline get_reg(char let, int32_t num)
 void sysc_op(cpu_core *cpu)
 {
 	// perform one of n syscall operations. including putc, puts, exit, etc.
-	if (cpu->verbose) printf("syscall %-2d: ", cpu->registers[get_reg('v', 0)]);
-	switch (cpu->registers[get_reg('v', 0)]) {
+	if (cpu->verbose) printf("syscall %-2d: ", cpu->registers[get_reg('v', 0)].value);
+	switch (cpu->registers[get_reg('v', 0)].value) {
 	case 1:
 		// Print the integer contained in A0
-		printf("%d", cpu->registers[get_reg('a', 0)]);
+		printf("%d", cpu->registers[get_reg('a', 0)].value);
+		fflush(stdout);
+		break;
+	case 2:
+		// Print the character contained in A0
+		printf("%c", (char)(cpu->registers[get_reg('a', 0)].value));
+		fflush(stdout);
 		break;
 
 	case 4:
 		// print string starting at address contained in A0 (FIXME: this does not increment memory counters!)
-		printf("%s", (const char *)cpu->mem->crackaddr(cpu->registers[get_reg('a', 0)]));
+		printf("%s", (const char *)cpu->mem->crackaddr(cpu->registers[get_reg('a', 0)].value));
+		fflush(stdout);
 		break;
 
 	case 5:
@@ -50,14 +57,14 @@ void sysc_op(cpu_core *cpu)
 	case 8: {
 		// read string, and put it into memory starting at A0 and running for up to A1 bytes
 		int32_t count = 0, c = 0;
-		int32_t length = cpu->registers[get_reg('a', 1)];
+		int32_t length = cpu->registers[get_reg('a', 1)].value;
 		// Do things the hard way so that memory statistics are right.
 		// (could just crackaddr and write directly, since virtual addresses are mem-mapped into this process)
 		while ((c = getchar()) && count < (length - 1)) {
-			cpu->mem->set<byte>(cpu->registers[get_reg('a', 0)] + count++, c);
+			cpu->mem->set<byte>(cpu->registers[get_reg('a', 0)].value + count++, c);
 			if (c == 0x0a) break;                                           // on newline, break so that we mimic 'gets'
 		}
-		cpu->mem->set<byte>(cpu->registers[get_reg('a', 0)] + count++, 0); // add on null char
+		cpu->mem->set<byte>(cpu->registers[get_reg('a', 0)].value + count++, 0); // add on null char
 	} break;
 
 	case 10:
@@ -67,7 +74,7 @@ void sysc_op(cpu_core *cpu)
 	case 20:
 		// Extension: print the register file to screen.
 		for (int32_t x = 0; x < 16; x++) {
-			printf("$%d:\t0x%08x\t\t$%d:\t0x%08x\n", x, cpu->registers[x], x + 16, cpu->registers[x + 16]);
+			printf("$%d:\t0x%08x\t\t$%d:\t0x%08x\n", x, cpu->registers[x].value, x + 16, cpu->registers[x + 16].value);
 		}
 		break;
 
@@ -75,5 +82,5 @@ void sysc_op(cpu_core *cpu)
 		throw "Unsupported SYSCALL was performed";
 		break;
 	}
-	printf("\n");
+	//printf("\n");
 }

@@ -11,7 +11,7 @@ using namespace std;
 
 memory::memory()
 {
-	mem = (byte *)mmap(NULL, 0x100000000, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
+	mem = (byte *)mmap(NULL, 0x80000000, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED, -1, 0);
 	if (mem == MAP_FAILED) {
 		perror("mmap failed to allocate simulator ram");
 		exit(20);
@@ -30,7 +30,7 @@ memory::memory()
 
 memory::~memory()
 {
-	munmap(mem, 0x100000000);
+	munmap(mem, 0x80000000);
 }
 
 

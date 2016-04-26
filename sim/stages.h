@@ -1,47 +1,148 @@
 #ifndef _LATCH_H_
 #define _LATCH_H_
 #include "instruction.h"
+#include "cache.h"
+
+enum StageState
+{
+	STAGE_BUSY = 0,
+	STAGE_IDLE
+};
+
 
 class latch {
 public:
 	byte opcode;
+	byte Rdest, Rsrc1, Rsrc2;	
+	latch ()
+	{
+		opcode = 0;     //initial default op to nop
+		
+	}	
+	
 	inline const instruction *control()
 	{
 		return &instructions[opcode];
+	}
+	
+	virtual bool isReady()
+	{
+		return true;
+	}
+	
+	virtual void reset()
+	{
+		Rdest = 0;
+		Rsrc1 = 0;
+		Rsrc2 = 0;
+		opcode = 0;
 	}
 };
 
 class IDl : public latch {
 public:
-	byte Rdest, Rsrc1, Rsrc2;
 	uint32_t immediate;
-	uint32_t PC;
 	bool predict_taken;
+	uint32_t PC;
+	uint32_t recoveryPC;
+	uint32_t bpHistory;
 };
 
 class DEl : public latch {
 public:
-	byte Rdest, Rsrc1, Rsrc2;
 	uint32_t immediate;
 	int32_t  Rsrc1Val, Rsrc2Val;
-	uint32_t PC;
 	bool predict_taken;
+	bool ready;				//indicate whether the data in the latch is ready or not	
+	uint32_t PC;
+	uint32_t recoveryPC;
+	uint32_t bpHistory;
+	
+	void setRsrc1Ready(bool _ready)
+	{
+		Rsrc1Ready=_ready;
+		ready = (Rsrc1Ready && Rsrc2Ready);
+	}
+	
+	void setRsrc2Ready(bool _ready)
+	{
+		Rsrc2Ready=_ready;
+		ready = (Rsrc1Ready && Rsrc2Ready);		
+	}
+	
+	virtual bool isReady()
+	{
+		return ready;
+	}
+	
+	virtual void reset()
+	{
+		Rdest = 0;
+		Rsrc1 = 0;
+		Rsrc2 = 0;
+		Rsrc1Val = 0;
+		Rsrc2Val = 0;
+		opcode = 0;
+		ready = false;
+	}	
+	
+private:
+	bool Rsrc1Ready, Rsrc2Ready;
 };
 
 class EMl : public latch {
 public:
-	byte Rdest, Rsrc1, Rsrc2;
+	uint32_t PC;	
 	uint32_t aluresult;
 	int32_t  Rsrc1Val, Rsrc2Val;
+	virtual void reset()
+	{
+		aluresult = 0;
+		Rsrc1Val = 0;
+		Rsrc2Val = 0;
+		opcode = 0;
+		PC = 0;
+	}	
+		
 };
 
 class MWl : public latch {
 public:
-	uint32_t aluresult, mem_data, Rdest;
+	uint32_t PC;	
+	uint32_t aluresult, mem_data;
 	int32_t  Rsrc2Val, Rsrc1Val;
+	virtual void reset()
+	{
+		PC=0;
+		aluresult = 0;
+		mem_data = 0;
+		Rsrc1Val = 0;
+		Rsrc2Val = 0;
+		opcode = 0;
+	}		
 };
 
-class InstructionFetchStage {
+class PipelineStage {
+public:
+	cpu_core *core;
+	bool OBF;	//output buffer full flag
+	bool IBF;	//input buffer full flag	
+	PipelineStage()
+	{
+		OBF=false;
+		IBF=false;
+	}
+	virtual void cycle()=0;
+	virtual void make_nop()=0;
+	virtual void shift()
+	{
+	}
+	virtual void doForwarding()
+	{
+	}
+};
+
+class InstructionFetchStage: public PipelineStage {
 public:
 	cpu_core *core;
 	IDl right;
@@ -51,14 +152,14 @@ public:
 	}
 
 
-	void Execute();
+	void cycle();
 	void make_nop()
 	{
-		bzero(&right, sizeof(IDl));
+		right.reset();
 	}
 };
 
-class InstructionDecodeStage {
+class InstructionDecodeStage: public PipelineStage {
 public:
 	cpu_core *core;
 	IDl left;
@@ -69,59 +170,72 @@ public:
 	}
 
 
-	void Execute();
-	void Shift();
-	void Resolve();
-	void make_nop()
-	{
-		bzero(&left, sizeof(IDl));
-		bzero(&right, sizeof(DEl));
-	}
+	void cycle();
+	void shift();
+	void make_nop();
 };
 
-class ExecuteStage {
+class ExecuteStage: public PipelineStage {
 public:
 	cpu_core *core;
 	DEl left;
 	EMl right;
+	int busyCycles;
+
 	ExecuteStage(cpu_core *c)
 	{
 		core = c; make_nop();
+		busyCycles=0;
 	}
 
-
-	void Execute();
-	void Shift();
-	void Resolve();
+	void cycle();
+	void shift();
+	void doForwarding();
 	void make_nop()
 	{
-		bzero(&left, sizeof(DEl));
-		bzero(&right, sizeof(EMl));
+		busyCycles=0;
+		right.reset();
+		left.reset();
 	}
 };
 
-class MemoryStage {
+class MemoryStage: public PipelineStage {
 public:
 	cpu_core *core;
 	EMl left;
 	MWl right;
+	StageState state;
+	
 	MemoryStage(cpu_core *c)
 	{
 		core = c; make_nop();
+		setIdle();
 	}
 
-
-	void Execute();
-	void Shift();
-	void Resolve();
+	bool isIdle()
+	{
+		return state == STAGE_IDLE;
+	}
+	void setBusy()
+	{
+		state = STAGE_BUSY;
+	}
+	void setIdle()
+	{
+		state = STAGE_IDLE;
+	}
+	void cycle();
+	void shift();
+	void doForwarding();
 	void make_nop()
 	{
-		bzero(&right, sizeof(MWl));
-		bzero(&left, sizeof(EMl));
+		right.reset();
+		left.reset();
 	}
+	void response(CachePacket* pkt);
 };
 
-class WriteBackStage {
+class WriteBackStage: public PipelineStage {
 public:
 	cpu_core *core;
 	MWl left;
@@ -131,11 +245,11 @@ public:
 	}
 
 
-	void Execute();
-	void Shift();
+	void cycle();
+	void shift();
 	void make_nop()
 	{
-		bzero(&left, sizeof(MWl));
+		left.reset();	
 	}
 };
 

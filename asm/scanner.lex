@@ -87,6 +87,7 @@ ws       [ \t]+
 ".word"   {return WORD; }
 ".byte"   {return BYTE; }
 ".space"  {return SPACE;}
+".spacedw" {return SPACEDW;}
 ".ascii"  {return ASCII;}
 ".asciiz"  {return ASCIIZ;}
 \.[a-zA-Z_0-9]*  {return SECTION_IDENT; /*for error reporting*/}
@@ -104,7 +105,11 @@ ws       [ \t]+
 "li"       {return LOADIMMED; }
 "syscall"  {return SYSCALL;   }
 "nop"      {return NOOP;      }
-
+"sb"       {return STOREBYTE; }
+"ld"       {return LOADDWORD; }
+"sd"       {return STOREDWORD; }
+"multi"    {return MULTI; }
+"mult"     {return MULT; }
 
 [,()] { return *yytext; /* punctuation marks */}
 

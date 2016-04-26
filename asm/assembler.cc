@@ -1,6 +1,7 @@
 #include "codegen.h"
 #include <unistd.h>
 #include <fstream>
+#include <stdlib.h>
 #include "../sim/types.h"
 #include "../sim/memory.h"
 

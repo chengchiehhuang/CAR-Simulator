@@ -45,7 +45,7 @@ void codegen::emit_label_address(string name)
 		current->out->write((char *)&blank, sizeof(uint32_t));
 	}
 	else {
-		uint32_t container = labels[name].position;
+		uint32_t container = current->position + labels[name].position;
 		current->out->write((char *)&container, sizeof(uint32_t));
 	}
 }

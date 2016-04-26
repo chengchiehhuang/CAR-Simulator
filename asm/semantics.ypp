@@ -13,11 +13,13 @@ short inline PACK_OPERANDS(byte x, byte y, byte z) {
          (z<<10) & (uint16_t)0x7C00;
   }
 %}
+
 %token NEWLINE TEXT_SECTION DATA_SECTION LABELDECL INTEGER LABELREF REGISTER INVALID_REGISTER
-%token ADDI ADD SUBI BRANCH BRANCHEQZ BRANCHGE BRANCHNE LOADADDR LOADBYTE LOADIMMED SYSCALL NOOP
-%token WORD BYTE SPACE ASCII ASCIIZ STRING SECTION_IDENT
-%type<sysword>   INTEGER REGISTER
+%token ADDI ADD SUBI BRANCH BRANCHEQZ BRANCHGE BRANCHNE LOADADDR LOADBYTE LOADIMMED SYSCALL NOOP STOREBYTE LOADDWORD STOREDWORD MULT MULTI
+%token WORD BYTE SPACE SPACEDW ASCII ASCIIZ STRING SECTION_IDENT
+%type<sysword>   INTEGER REGISTER rsrc1 rsrc2 rdest
 %type<sysstring> STRING LABELDECL LABELREF
+%type<sysoffset> offset
 %%
 
 program      : statements 
@@ -34,6 +36,7 @@ addressable  : dataelement
 dataelement  : word
              | byte
              | space
+             | spacedw
              | ascii
              | asciiz
              | error {
@@ -80,37 +83,38 @@ statement    : TEXT_SECTION    { cgen->in_text_section(); }
              }
              ;
              
-instruction : ADDI    { cgen->emit<byte>(1); } rdest ',' rsrc1 { 
-                  cgen->emit<uint16_t>(PACK_OPERANDS($3.sysword, $5.sysword, 0)); } ',' 
+instruction : 
+             ADDI    { cgen->emit<byte>(1); } rdest ',' rsrc1 { 
+                  cgen->emit<uint16_t>(PACK_OPERANDS($3, $5, 0)); } ',' 
                   INTEGER { cgen->emit<uint32_t>($8); }
              | ADD    { cgen->emit<byte>(9); } rdest ',' rsrc1 ',' rsrc2 {
-                cgen->emit<uint16_t>(PACK_OPERANDS($3.sysword, $5.sysword, $7.sysword)); 
+                cgen->emit<uint16_t>(PACK_OPERANDS($3, $5, $7)); 
                 cgen->emit<uint32_t>(0); }
              | SUBI   { cgen->emit<byte>(8); }    
-               rdest ',' rsrc1 { cgen->emit<uint16_t>(PACK_OPERANDS($3.sysword, $5.sysword, 0)); } ',' 
+               rdest ',' rsrc1 { cgen->emit<uint16_t>(PACK_OPERANDS($3, $5, 0)); } ',' 
                INTEGER {
                  cgen->emit<uint32_t>($8);
                }
              | BRANCHGE  { cgen->emit<byte>(3); }  
-               rsrc1 ',' rsrc2 ',' { cgen->emit<uint16_t>(PACK_OPERANDS(0, $3.sysword, $5.sysword)); } 
+               rsrc1 ',' rsrc2 ',' { cgen->emit<uint16_t>(PACK_OPERANDS(0, $3, $5)); } 
                address
              | BRANCHNE  { cgen->emit<byte>(4); } 
-               rsrc1 ',' rsrc2 ',' { cgen->emit<uint16_t>(PACK_OPERANDS(0, $3.sysword, $5.sysword)); }
+               rsrc1 ',' rsrc2 ',' { cgen->emit<uint16_t>(PACK_OPERANDS(0, $3, $5)); }
                address
              | LOADBYTE  { cgen->emit<byte>(6); }
                rdest ',' offset    { 
-                 cgen->emit<uint16_t>(PACK_OPERANDS($3.sysword, $5.sysoffset.reg, 0)); 
-                 cgen->emit<uint32_t>($5.sysoffset.offset);
+                 cgen->emit<uint16_t>(PACK_OPERANDS($3, $5.reg, 0)); 
+                 cgen->emit<uint32_t>($5.offset);
                }
              | LOADADDR  { cgen->emit<byte>(5); } 
-               rdest ',' { cgen->emit<uint16_t>(PACK_OPERANDS($3.sysword, 0, 0)); } 
+               rdest ',' { cgen->emit<uint16_t>(PACK_OPERANDS($3, 0, 0)); } 
                address
              | BRANCHEQZ { cgen->emit<byte>(2); } 
-               rsrc1 ',' { cgen->emit<uint16_t>(PACK_OPERANDS(0, $3.sysword, 0)); }
+               rsrc1 ',' { cgen->emit<uint16_t>(PACK_OPERANDS(0, $3, 0)); }
                address
              | LOADIMMED rdest ',' INTEGER {
                  cgen->emit<byte>(7);
-                 cgen->emit<short>(PACK_OPERANDS($2.sysword, 0, 0));
+                 cgen->emit<short>(PACK_OPERANDS($2, 0, 0));
                  cgen->emit<uint32_t>($4);
                }
              | BRANCH { cgen->emit<byte>(2); cgen->emit<short>(0); }    
@@ -121,6 +125,27 @@ instruction : ADDI    { cgen->emit<byte>(1); } rdest ',' rsrc1 {
              | NOOP {
                  cgen->emit<byte>(0); cgen->emit<short>(0); cgen->emit<uint32_t>(0);
                }
+             | STOREBYTE  { cgen->emit<byte>(11); }
+               offset ',' rdest { 
+                 cgen->emit<uint16_t>(PACK_OPERANDS(0, $3.reg, $5)); 
+                 cgen->emit<uint32_t>($3.offset);
+               }
+             | LOADDWORD  { cgen->emit<byte>(12); }
+               rdest ',' offset    {
+                 cgen->emit<uint16_t>(PACK_OPERANDS($3, $5.reg, 0));
+                 cgen->emit<uint32_t>($5.offset);
+               }
+             | STOREDWORD  { cgen->emit<byte>(13); }
+               offset ',' rdest {
+                 cgen->emit<uint16_t>(PACK_OPERANDS(0, $3.reg, $5));
+                 cgen->emit<uint32_t>($3.offset);
+               }
+             | MULTI    { cgen->emit<byte>(14); } rdest ',' rsrc1 { 
+                  cgen->emit<uint16_t>(PACK_OPERANDS($3, $5, 0)); } ',' 
+                  INTEGER { cgen->emit<uint32_t>($8); }
+             | MULT    { cgen->emit<byte>(15); } rdest ',' rsrc1 ',' rsrc2 {
+                cgen->emit<uint16_t>(PACK_OPERANDS($3, $5, $7)); 
+                cgen->emit<uint32_t>(0); }             
              | LABELREF {
                 cout << "unknown instruction; line " << yylineno << endl;  exit(11);  
               }
@@ -143,7 +168,19 @@ space        : SPACE INTEGER         { cgen->emit_n<byte>($2, 0); }
              | SPACE error {                       
                cout << "invalid .space; line " << yylineno << endl;   exit(11);             
              }                                     
-             ;                                     
+             ;
+                                     
+space        : SPACE INTEGER INTEGER        { cgen->emit_n<byte>($2, $3); }
+             | SPACE error {                       
+               cout << "invalid .space; line " << yylineno << endl;   exit(11); 
+             }                                     
+             ;
+                                     
+spacedw      : SPACEDW INTEGER INTEGER        { cgen->emit_n<uint32_t>($2, $3); }
+             | SPACEDW error {
+               cout << "invalid .space; line " << yylineno << endl;   exit(11);
+             }
+             ;
 
 ascii        : ASCII STRING          { cgen->emit_string(std::string($2.ptr, $2.len)); }
              | ASCII error {                       

@@ -9,5 +9,5 @@ clean:
 	rm -rf *.o *.d *lex.yy.c *.output *.tab.?pp *.vcg rsim rasm
 
 deliverable: clean
-	tar -zcvf clord-mips-cpu-sim.tgz Makefile sim/ asm/ regs *.s
+	tar -zcvf car-pa2.tar.gz Makefile LICENSE sim/ asm/ regs
 
