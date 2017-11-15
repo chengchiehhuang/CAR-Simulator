@@ -38,77 +38,68 @@
  * @todo Consider making this something that more closely mimics a
  * built in class so you can use ++ or --.
  */
-class SatCounter
-{
-  public:
-    /**
-     * Constructor for the counter.
-     */
-    SatCounter()
-        : initialVal(0), counter(0)
-    { }
+class SatCounter {
+public:
+  /**
+   * Constructor for the counter.
+   */
+  SatCounter() : initialVal(0), counter(0) {}
 
-    /**
-     * Constructor for the counter.
-     * @param bits How many bits the counter will have.
-     */
-    SatCounter(unsigned bits)
-        : initialVal(0), maxVal((1 << bits) - 1), counter(0)
-    { }
+  /**
+   * Constructor for the counter.
+   * @param bits How many bits the counter will have.
+   */
+  SatCounter(unsigned bits)
+      : initialVal(0), maxVal((1 << bits) - 1), counter(0) {}
 
-    /**
-     * Constructor for the counter.
-     * @param bits How many bits the counter will have.
-     * @param initial_val Starting value for each counter.
-     */
-    SatCounter(unsigned bits, uint8_t initial_val)
-        : initialVal(initial_val), maxVal((1 << bits) - 1),
-          counter(initial_val)
-    {
-        // Check to make sure initial value doesn't exceed the max
-        // counter value.
-        if (initial_val > maxVal) {
-            //fatal("BP: Initial counter value exceeds max size.");
-        }
+  /**
+   * Constructor for the counter.
+   * @param bits How many bits the counter will have.
+   * @param initial_val Starting value for each counter.
+   */
+  SatCounter(unsigned bits, uint8_t initial_val)
+      : initialVal(initial_val), maxVal((1 << bits) - 1), counter(initial_val) {
+    // Check to make sure initial value doesn't exceed the max
+    // counter value.
+    if (initial_val > maxVal) {
+      // fatal("BP: Initial counter value exceeds max size.");
     }
+  }
 
-    /**
-     * Sets the number of bits.
-     */
-    void setBits(unsigned bits) { maxVal = (1 << bits) - 1; }
+  /**
+   * Sets the number of bits.
+   */
+  void setBits(unsigned bits) { maxVal = (1 << bits) - 1; }
 
-    void reset() { counter = initialVal; }
+  void reset() { counter = initialVal; }
 
-    /**
-     * Increments the counter's current value.
-     */
-    void increment()
-    {
-        if (counter < maxVal) {
-            ++counter;
-        }
+  /**
+   * Increments the counter's current value.
+   */
+  void increment() {
+    if (counter < maxVal) {
+      ++counter;
     }
+  }
 
-    /**
-     * Decrements the counter's current value.
-     */
-    void decrement()
-    {
-        if (counter > 0) {
-            --counter;
-        }
+  /**
+   * Decrements the counter's current value.
+   */
+  void decrement() {
+    if (counter > 0) {
+      --counter;
     }
+  }
 
-    /**
-     * Read the counter's value.
-     */
-    const uint8_t read() const
-    { return counter; }
+  /**
+   * Read the counter's value.
+   */
+  const uint8_t read() const { return counter; }
 
-  private:
-    uint8_t initialVal;
-    uint8_t maxVal;
-    uint8_t counter;
+private:
+  uint8_t initialVal;
+  uint8_t maxVal;
+  uint8_t counter;
 };
 
 #endif // __CPU_PRED_SAT_COUNTER_HH__

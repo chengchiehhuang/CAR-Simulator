@@ -29,104 +29,92 @@
  * Authors: Kevin Lim
  */
 #include <cassert>
-#include  <math.h>
+#include <math.h>
 #include "2bit_local.hh"
 
-LocalBP::LocalBP(const unsigned _localPredictorSize, const unsigned _localCtrBits, const unsigned _instShiftAmt)
-    : localPredictorSize(_localPredictorSize),
-      localCtrBits(_localCtrBits),
-      instShiftAmt(_instShiftAmt)
-{
-    /*
-    if (!isPowerOf2(localPredictorSize)) {
-        //fatal("Invalid local predictor size!\n");
-        assert(1);
-    }
-    */
+LocalBP::LocalBP(const unsigned _localPredictorSize,
+                 const unsigned _localCtrBits, const unsigned _instShiftAmt)
+    : localPredictorSize(_localPredictorSize), localCtrBits(_localCtrBits),
+      instShiftAmt(_instShiftAmt) {
+  /*
+  if (!isPowerOf2(localPredictorSize)) {
+      //fatal("Invalid local predictor size!\n");
+      assert(1);
+  }
+  */
 
-    localPredictorSets = localPredictorSize / localCtrBits;
-/*
-    if (!isPowerOf2(localPredictorSets)) {
-        //fatal("Invalid number of local predictor sets! Check localCtrBits.\n");
-        assert(1);
-    }
-*/
-    // Setup the index mask.
-    indexMask = localPredictorSets - 1;
+  localPredictorSets = localPredictorSize / localCtrBits;
+  /*
+      if (!isPowerOf2(localPredictorSets)) {
+          //fatal("Invalid number of local predictor sets! Check
+     localCtrBits.\n");
+          assert(1);
+      }
+  */
+  // Setup the index mask.
+  indexMask = localPredictorSets - 1;
 
-    //printf("index mask: %#x\n", indexMask);
+  // printf("index mask: %#x\n", indexMask);
 
-    // Setup the array of counters for the local predictor.
-    localCtrs.resize(localPredictorSets);
+  // Setup the array of counters for the local predictor.
+  localCtrs.resize(localPredictorSets);
 
-    for (unsigned i = 0; i < localPredictorSets; ++i)
-        localCtrs[i].setBits(localCtrBits);
+  for (unsigned i = 0; i < localPredictorSets; ++i)
+    localCtrs[i].setBits(localCtrBits);
 
-    //printf("local predictor size: %i\n", localPredictorSize);
+  // printf("local predictor size: %i\n", localPredictorSize);
 
-    //printf("local counter bits: %i\n", localCtrBits);
+  // printf("local counter bits: %i\n", localCtrBits);
 
-    //printf("instruction shift amount: %i\n", instShiftAmt);
-    reset();
+  // printf("instruction shift amount: %i\n", instShiftAmt);
+  reset();
 }
 
-void
-LocalBP::reset()
-{
-    for (unsigned i = 0; i < localPredictorSets; ++i) {
-        localCtrs[i].reset();
-    }
+void LocalBP::reset() {
+  for (unsigned i = 0; i < localPredictorSets; ++i) {
+    localCtrs[i].reset();
+  }
 }
 
+bool LocalBP::lookup(Addr branch_addr, uint32_t *bpHistory) {
+  bool taken;
+  uint8_t counter_val;
+  unsigned local_predictor_idx = getLocalIndex(branch_addr);
 
-bool
-LocalBP::lookup(Addr branch_addr, uint32_t *bpHistory)
-{
-    bool taken;
-    uint8_t counter_val;
-    unsigned local_predictor_idx = getLocalIndex(branch_addr);
+  // printf("Looking up index %#x\n", local_predictor_idx);
 
-   // printf("Looking up index %#x\n", local_predictor_idx);
+  counter_val = localCtrs[local_predictor_idx].read();
 
-    counter_val = localCtrs[local_predictor_idx].read();
+  // printf("prediction is %i.\n", (int)counter_val);
 
-    //printf("prediction is %i.\n", (int)counter_val);
+  taken = getPrediction(counter_val);
 
-    taken = getPrediction(counter_val);
-
-    return taken;
+  return taken;
 }
 
-void
-LocalBP::update(Addr branch_addr, bool taken, uint32_t *bpHistory, bool squash)
-{
-    unsigned local_predictor_idx;
+void LocalBP::update(Addr branch_addr, bool taken, uint32_t *bpHistory,
+                     bool squash) {
+  unsigned local_predictor_idx;
 
-    // Update the local predictor.
-    local_predictor_idx = getLocalIndex(branch_addr);
+  // Update the local predictor.
+  local_predictor_idx = getLocalIndex(branch_addr);
 
-    //printf("Looking up index %#x\n", local_predictor_idx);
+  // printf("Looking up index %#x\n", local_predictor_idx);
 
-    if (taken) {
-        //printf("Branch updated as taken.\n");
-        localCtrs[local_predictor_idx].increment();
-    } else {
-        //printf("Branch updated as not taken.\n");
-        localCtrs[local_predictor_idx].decrement();
-    }
+  if (taken) {
+    // printf("Branch updated as taken.\n");
+    localCtrs[local_predictor_idx].increment();
+  } else {
+    // printf("Branch updated as not taken.\n");
+    localCtrs[local_predictor_idx].decrement();
+  }
 }
 
-inline
-bool
-LocalBP::getPrediction(uint8_t &count)
-{
-    // Get the MSB of the count
-    return (count >> (localCtrBits - 1));
+inline bool LocalBP::getPrediction(uint8_t &count) {
+  // Get the MSB of the count
+  return (count >> (localCtrBits - 1));
 }
 
-inline
-unsigned
-LocalBP::getLocalIndex(Addr &branch_addr)
-{
-    return (branch_addr >> instShiftAmt) & indexMask;
+inline unsigned LocalBP::getLocalIndex(Addr &branch_addr) {
+  return (branch_addr >> instShiftAmt) & indexMask;
 }

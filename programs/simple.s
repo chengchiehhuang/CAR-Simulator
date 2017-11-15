@@ -5,7 +5,7 @@ main:
 	subi $5, $4, 1
 	addi $3, $4, 2
 	la   $6, seg
-	b exit
+	bge  $6, $3, exit  
 	subi $5, $4, 1
 	addi $3, $4, 2
 	lb   $7, 1($6)
@@ -20,3 +20,4 @@ exit:
 
 seg:
 	.asciiz "atest\n"
+

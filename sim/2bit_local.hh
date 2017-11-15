@@ -59,69 +59,65 @@
  * determined solely by the branch being taken or not taken.
  */
 
-class LocalBP : public BPredUnit
-{
-  public:
-    /**
-     * Default branch predictor constructor.
-     */
-    //localPredictorSize = Param.Unsigned(2048, "Size of local predictor")
-    //localCtrBits = Param.Unsigned(2, "Bits per counter")
-    //instShiftAmt = Param.Unsigned(2, "Number of bits to shift instructions by")
-    LocalBP(const unsigned _localPredictorSize, const unsigned _localCtrBits, const unsigned _instShiftAmt);
+class LocalBP : public BPredUnit {
+public:
+  /**
+   * Default branch predictor constructor.
+   */
+  // localPredictorSize = Param.Unsigned(2048, "Size of local predictor")
+  // localCtrBits = Param.Unsigned(2, "Bits per counter")
+  // instShiftAmt = Param.Unsigned(2, "Number of bits to shift instructions by")
+  LocalBP(const unsigned _localPredictorSize, const unsigned _localCtrBits,
+          const unsigned _instShiftAmt);
 
-	virtual ~LocalBP()
-	{
-		
-	}
-    /**
-     * Looks up the given address in the branch predictor and returns
-     * a true/false value as to whether it is taken.
-     * @param branch_addr The address of the branch to look up.
-     * @param bp_history Pointer to any bp history state.
-     * @return Whether or not the branch is taken.
-     */
-    bool lookup(Addr branch_addr, uint32_t *bpHistory);
+  virtual ~LocalBP() {}
+  /**
+   * Looks up the given address in the branch predictor and returns
+   * a true/false value as to whether it is taken.
+   * @param branch_addr The address of the branch to look up.
+   * @param bp_history Pointer to any bp history state.
+   * @return Whether or not the branch is taken.
+   */
+  bool lookup(Addr branch_addr, uint32_t *bpHistory);
 
-    /**
-     * Updates the branch predictor with the actual result of a branch.
-     * @param branch_addr The address of the branch to update.
-     * @param taken Whether or not the branch was taken.
-     */
-    void update(Addr branch_addr, bool taken, uint32_t *bpHistory, bool squash);
+  /**
+   * Updates the branch predictor with the actual result of a branch.
+   * @param branch_addr The address of the branch to update.
+   * @param taken Whether or not the branch was taken.
+   */
+  void update(Addr branch_addr, bool taken, uint32_t *bpHistory, bool squash);
 
-    void reset();
+  void reset();
 
-  private:
-    /**
-     *  Returns the taken/not taken prediction given the value of the
-     *  counter.
-     *  @param count The value of the counter.
-     *  @return The prediction based on the counter value.
-     */
-    inline bool getPrediction(uint8_t &count);
+private:
+  /**
+   *  Returns the taken/not taken prediction given the value of the
+   *  counter.
+   *  @param count The value of the counter.
+   *  @return The prediction based on the counter value.
+   */
+  inline bool getPrediction(uint8_t &count);
 
-    /** Calculates the local index based on the PC. */
-    inline unsigned getLocalIndex(Addr &PC);
+  /** Calculates the local index based on the PC. */
+  inline unsigned getLocalIndex(Addr &PC);
 
-    /** Array of counters that make up the local predictor. */
-    std::vector<SatCounter> localCtrs;
+  /** Array of counters that make up the local predictor. */
+  std::vector<SatCounter> localCtrs;
 
-    /** Size of the local predictor. */
-    unsigned localPredictorSize;
+  /** Size of the local predictor. */
+  unsigned localPredictorSize;
 
-    /** Number of sets. */
-    unsigned localPredictorSets;
+  /** Number of sets. */
+  unsigned localPredictorSets;
 
-    /** Number of bits of the local predictor's counters. */
-    unsigned localCtrBits;
+  /** Number of bits of the local predictor's counters. */
+  unsigned localCtrBits;
 
-    /** Number of bits to shift the PC when calculating index. */
-    unsigned instShiftAmt;
+  /** Number of bits to shift the PC when calculating index. */
+  unsigned instShiftAmt;
 
-    /** Mask to get index bits. */
-    unsigned indexMask;
-	
+  /** Mask to get index bits. */
+  unsigned indexMask;
 };
 
 #endif // __CPU_PRED_2BIT_LOCAL_PRED_HH__

@@ -60,89 +60,63 @@ typedef uint32_t Addr;
  * determined solely by the branch being taken or not taken.
  */
 
-class BPredUnit
-{
-  public:
-    /**
-     * Default branch predictor constructor.
-     */
-    BPredUnit()
-	{
-		
-	}
-	virtual ~BPredUnit()
-	{
-		
-	}
-    /**
-     * Looks up the given address in the branch predictor and returns
-     * a true/false value as to whether it is taken.
-     * @param branch_addr The address of the branch to look up.
-     * @param bp_history Pointer to any bp history state.
-     * @return Whether or not the branch is taken.
-     */
-    virtual bool lookup(Addr branch_addr, uint32_t *globalHistory)=0;
+class BPredUnit {
+public:
+  /**
+   * Default branch predictor constructor.
+   */
+  BPredUnit() {}
+  virtual ~BPredUnit() {}
+  /**
+   * Looks up the given address in the branch predictor and returns
+   * a true/false value as to whether it is taken.
+   * @param branch_addr The address of the branch to look up.
+   * @param bp_history Pointer to any bp history state.
+   * @return Whether or not the branch is taken.
+   */
+  virtual bool lookup(Addr branch_addr, uint32_t *globalHistory) = 0;
 
-    /**
-     * Updates the branch predictor with the actual result of a branch.
-     * @param branch_addr The address of the branch to update.
-     * @param taken Whether or not the branch was taken.
-     */
-    virtual void update(Addr branch_addr, bool taken, uint32_t *globalHistory, bool squash)=0;
+  /**
+   * Updates the branch predictor with the actual result of a branch.
+   * @param branch_addr The address of the branch to update.
+   * @param taken Whether or not the branch was taken.
+   */
+  virtual void update(Addr branch_addr, bool taken, uint32_t *globalHistory,
+                      bool squash) = 0;
 
-    //virtual void reset();
+  // virtual void reset();
 };
 
-class AlwaysTakenBP : public BPredUnit
-{
-  public:
-    /**
-     * Default branch predictor constructor.
-     */
-    AlwaysTakenBP()
-	{
-		
-	}
-	virtual ~AlwaysTakenBP()
-	{
-		
-	}
-	
-    bool lookup(Addr branch_addr, uint32_t *globalHistory)
-	{
-		return true;
-	}
+class AlwaysTakenBP : public BPredUnit {
+public:
+  /**
+   * Default branch predictor constructor.
+   */
+  AlwaysTakenBP() {}
+  virtual ~AlwaysTakenBP() {}
 
-    void update(Addr branch_addr, bool taken, uint32_t *globalHistory, bool squash)
-	{
-			//do nothing
-	}
+  bool lookup(Addr branch_addr, uint32_t *globalHistory) { return true; }
+
+  void update(Addr branch_addr, bool taken, uint32_t *globalHistory,
+              bool squash) {
+    // do nothing
+  }
 };
 
-class AlwaysNotTakenBP : public BPredUnit
-{
-  public:
-    /**
-     * Default branch predictor constructor.
-     */
-    AlwaysNotTakenBP()
-	{
-		
-	}
-	virtual ~AlwaysNotTakenBP()
-	{
-		
-	}
-	
-    bool lookup(Addr branch_addr, uint32_t *globalHistory)
-	{
-		return false;
-	}
+class AlwaysNotTakenBP : public BPredUnit {
+public:
+  /**
+   * Default branch predictor constructor.
+   */
+  AlwaysNotTakenBP() {}
+  virtual ~AlwaysNotTakenBP() {}
 
-    void update(Addr branch_addr, bool taken, uint32_t *globalHistory, bool squash)
-	{
-			//do nothing
-	}
+  bool lookup(Addr branch_addr, uint32_t *globalHistory) { return false; }
+
+  void update(Addr branch_addr, bool taken, uint32_t *globalHistory,
+              bool squash) {
+    // do nothing
+  }
 };
 
 #endif // __BP_PRED_UNIT_HH__
